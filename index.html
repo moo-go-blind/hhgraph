@@ -136,6 +136,7 @@ svg.chart{width:100%;height:auto;display:block}
 "use strict";
 /* ================= 状態 ================= */
 const LS_KEY = "hhGenericDashboard.v1";
+const BUILD_SEED_SAMPLE = false; // Pages用ビルドでは true にして docs/ へ配置する
 let uidSeq = 1;
 function uid(p){ return p + "_" + (uidSeq++) + "_" + Math.random().toString(36).slice(2,7); }
 
@@ -166,7 +167,7 @@ function defaultState(){
 function loadState(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return sampleState();
+    if(!raw) return BUILD_SEED_SAMPLE ? sampleState() : defaultState();
     const s = JSON.parse(raw);
     if(!s || !s.settings || !Array.isArray(s.products) || !s.data) return defaultState();
     return s;
