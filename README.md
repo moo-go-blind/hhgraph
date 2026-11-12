@@ -6,7 +6,7 @@
 
 リポジトリ直下の `index.html` をブラウザで開くだけです（空の状態から始まります）。
 
-GitHub Pages（https://moo-go-blind.github.io/hhgraph/）は、開いてすぐ見られるようにサンプルデータを入れた状態で公開しています（`docs/index.html`）。実務で使うときはPagesではなく、リポジトリ直下の `index.html` を使ってください。
+GitHub Pages（[https://moo-go-blind.github.io/hhgraph/](https://moo-go-blind.github.io/hhgraph/)）は、開いてすぐ見られるようにサンプルデータを入れた状態で公開しています（`docs/index.html`）。実務で使うときはPagesではなく、リポジトリ直下の `index.html` を使ってください。
 
 1. 「設定タブ」で、自施設に合わせてマスタを登録します。
 2. 「入力タブ」で、月ごとに数値を入力します。
