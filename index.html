@@ -765,6 +765,11 @@ function renderSettings(){
         <span class="field"><label>読み込み（JSON）</label><input type="file" id="importFile" accept=".json,application/json"></span>
       </div>
       <div class="row-flex mt">
+        <button class="btn" id="exportCsvBtn">書き出し（CSV）</button>
+        <span class="field"><label>読み込み（CSV）</label><input type="file" id="importCsvFile" accept=".csv,text/csv"></span>
+      </div>
+      <p class="note">CSVは入力データだけの形式です（月・区分・部署/病棟・製品・値）。Excelで開いて編集もできます。読み込みでは今の入力データをCSVの内容で置き換えます。マスタに無い病棟・部署・製品名が出てきたら、マスタへ自動で追加します（製品の容量・1回量は仮の値になるので、消毒薬マスタで直してください）。設定やマスタも含めて移すときはJSONを使ってください。</p>
+      <div class="row-flex mt">
         <button class="btn" id="sampleBtn">サンプルデータを読み込む</button>
         <button class="btn danger" id="clearBtn">すべてのデータを消す</button>
       </div>`;
@@ -785,6 +790,27 @@ function renderSettings(){
           if(!s.settings || !Array.isArray(s.products) || !s.data) throw new Error("形式が違います");
           S = s; save(); applySettings(); renderAll();
           alert("読み込みました。");
+        }catch(err){ alert("読み込めませんでした: " + err.message); }
+      };
+      r.readAsText(f);
+    });
+    $("#exportCsvBtn").addEventListener("click", () => {
+      const blob = new Blob(["\ufeff" + buildCSV()], { type:"text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "手指衛生データ.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    $("#importCsvFile").addEventListener("change", e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try{
+          if(!confirm("今の入力データを、CSVの内容で置き換えます。よろしいですか？")) return;
+          const added = applyCSV(String(r.result));
+          save(); inputMonth = null; renderAll();
+          alert("CSVを読み込みました。" + (added.length ? "\nマスタへ追加した項目: " + added.join("、") : ""));
         }catch(err){ alert("読み込めませんでした: " + err.message); }
       };
       r.readAsText(f);
@@ -822,6 +848,93 @@ function renderSettings(){
     if(kind === "outs") S.outs.push({ id:uid("o"), name:"新しい部署" });
     save(); renderSettings();
   });
+}
+function csvCell(v){
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function buildCSV(){
+  const lines = [["月","区分","部署・病棟","製品","値"].join(",")];
+  const push = (m, cat, owner, prod, v) => { if(v != null) lines.push([m, cat, owner, prod, v].map(csvCell).join(",")); };
+  for(const m of dataMonths()){
+    const d = monthData(m);
+    for(const w of S.wards) for(const p of S.products) push(m, "使用本数（病棟）", w.name, p.name, d.wu[w.id]?.[p.id]);
+    for(const o of S.outs) for(const p of S.products) push(m, "使用本数（病棟外）", o.name, p.name, d.ou[o.id]?.[p.id]);
+    for(const w of S.wards) push(m, "延べ患者数（病棟）", w.name, "", d.wp[w.id]);
+    push(m, "延べ患者数（入院）", "病院全体", "", d.hosp.in);
+    push(m, "延べ患者数（外来）", "病院全体", "", d.hosp.out);
+    for(const w of S.wards){
+      const c = d.comp[w.id]; if(!c) continue;
+      push(m, "遵守率（入室時・実施）", w.name, "", c.en?.[0]);
+      push(m, "遵守率（入室時・観察）", w.name, "", c.en?.[1]);
+      push(m, "遵守率（退室時・実施）", w.name, "", c.ex?.[0]);
+      push(m, "遵守率（退室時・観察）", w.name, "", c.ex?.[1]);
+    }
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+function parseCSV(text){
+  const rows = [];
+  let row = [], cur = "", inQ = false;
+  const t = text.replace(/^\ufeff/, "");
+  for(let i = 0; i < t.length; i++){
+    const ch = t[i];
+    if(inQ){
+      if(ch === '"'){ if(t[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else if(ch === '"'){ inQ = true; }
+    else if(ch === ","){ row.push(cur); cur = ""; }
+    else if(ch === "\n"){ row.push(cur); cur = ""; rows.push(row); row = []; }
+    else if(ch !== "\r"){ cur += ch; }
+  }
+  if(cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.length && r.some(c => String(c).trim() !== ""));
+}
+function applyCSV(text){
+  const rows = parseCSV(text);
+  const added = [];
+  const wardByName = name => {
+    let w = S.wards.find(x => x.name === name);
+    if(!w){ w = { id: uid("w"), name, general: true }; S.wards.push(w); added.push("病棟「" + name + "」"); }
+    return w;
+  };
+  const outByName = name => {
+    let o = S.outs.find(x => x.name === name);
+    if(!o){ o = { id: uid("o"), name }; S.outs.push(o); added.push("病棟外「" + name + "」"); }
+    return o;
+  };
+  const productByName = name => {
+    let p = S.products.find(x => x.name === name);
+    if(!p){ p = { id: uid("p"), name, capacity: 500, dose: 3, kind: "請求" }; S.products.push(p); added.push("製品「" + name + "」"); }
+    return p;
+  };
+  const newData = {};
+  let first = true;
+  for(const r of rows){
+    if(first && (r[0] === "月" || /^\d{4}-\d{2}$/.test(r[0]) === false)){ first = false; continue; }
+    first = false;
+    const [m, cat, owner, prod, valRaw] = r.map(x => String(x ?? "").trim());
+    if(!/^\d{4}-\d{2}$/.test(m)) continue;
+    const v = num(valRaw); if(v == null) continue;
+    if(!newData[m]) newData[m] = { wu:{}, ou:{}, wp:{}, hosp:{ in:null, out:null }, comp:{} };
+    const d = newData[m];
+    if(cat === "使用本数（病棟）"){ const w = wardByName(owner), p = productByName(prod); (d.wu[w.id] = d.wu[w.id] || {})[p.id] = v; }
+    else if(cat === "使用本数（病棟外）"){ const o = outByName(owner), p = productByName(prod); (d.ou[o.id] = d.ou[o.id] || {})[p.id] = v; }
+    else if(cat === "延べ患者数（病棟）"){ const w = wardByName(owner); d.wp[w.id] = v; }
+    else if(cat === "延べ患者数（入院）"){ d.hosp.in = v; }
+    else if(cat === "延べ患者数（外来）"){ d.hosp.out = v; }
+    else if(cat.startsWith("遵守率")){
+      const w = wardByName(owner);
+      const c = (d.comp[w.id] = d.comp[w.id] || { en:[null,null], ex:[null,null] });
+      if(cat.includes("入室時・実施")) c.en[0] = v;
+      else if(cat.includes("入室時・観察")) c.en[1] = v;
+      else if(cat.includes("退室時・実施")) c.ex[0] = v;
+      else if(cat.includes("退室時・観察")) c.ex[1] = v;
+    }
+  }
+  if(!Object.keys(newData).length) throw new Error("有効な行がありませんでした");
+  S.data = newData;
+  return added;
 }
 function sampleState(){
   const st = defaultState();
