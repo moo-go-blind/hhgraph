@@ -44,9 +44,16 @@ table{border-collapse:collapse;width:100%}
 th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:right;font-size:13px}
 th{background:var(--th);font-weight:600;text-align:right}
 th:first-child,td:first-child{text-align:left}
-table.grid td{padding:2px 4px}
-table.grid input{width:86px;border:1px solid transparent;background:var(--input-bg);border-radius:4px;padding:5px 6px}
-table.grid input:focus{border-color:var(--accent);outline:none}
+table.sheet{border:1px solid var(--line);width:auto;min-width:520px}
+table.sheet th,table.sheet td{border:1px solid var(--line);padding:0;height:27px}
+table.sheet thead th{background:var(--th);padding:4px 10px;font-size:12px;text-align:right;white-space:nowrap}
+table.sheet thead th:first-child{text-align:left}
+table.sheet th.rowh{background:var(--th);text-align:left;padding:4px 10px;font-size:12px;white-space:nowrap;min-width:110px}
+table.sheet td input{width:104px;height:26px;border:0;background:transparent;padding:2px 8px;text-align:right;font:inherit;color:var(--ink);display:block}
+table.sheet td input:focus{outline:2px solid var(--accent);outline-offset:-2px;background:var(--panel)}
+table.sheet td.inrange{background:rgba(70,140,210,.20)}
+table.sheet td.ro{text-align:right;padding:2px 10px;color:var(--sub);background:var(--th);min-width:64px}
+.sheet-wrap{overflow-x:auto;padding-bottom:4px}
 table.editor input[type="text"]{width:180px}
 table.editor input[type="number"]{width:90px}
 .missing{color:var(--sub)}
@@ -69,7 +76,7 @@ svg.chart{width:100%;height:auto;display:block}
   .settings-nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}
   .settings-nav button.active{border-bottom-color:var(--accent)}
   .settings-body{padding:12px 0 0}
-  table.grid input{width:64px}
+  table.sheet td input{width:76px}
 }
 </style>
 </head>
@@ -105,7 +112,7 @@ svg.chart{width:100%;height:auto;display:block}
       <button class="btn small danger" id="deleteMonthBtn">この月を削除</button>
     </div>
     <div id="inputBody"></div>
-    <p class="note">空欄は未入力（0とは扱いません）。表のセルはExcelからコピーした値をそのまま貼り付けできます（貼り付け開始セルから右・下へ広がります）。入力すると自動で保存されます。</p>
+    <p class="note">空欄は未入力（0とは扱いません）。矢印キー・Enter・Tabでセルを移動できます。ドラッグやShift＋矢印で範囲を選ぶと、まとめてコピー・貼り付け・Delete消去ができます。Excelからコピーした表もそのまま貼り付けできます。入力すると自動で保存されます。</p>
   </div>
 
   <!-- ===== 設定 ===== -->
@@ -503,9 +510,9 @@ function renderView(){
   }
 }
 
-/* ================= 入力 ================= */
+/* ================= 入力（スプレッドシート型グリッド） ================= */
 let inputMonth = null;
-function renderInput(){
+function renderInput(focusPos){
   const months = dataMonths();
   if(!inputMonth || !months.includes(inputMonth)) inputMonth = months.length ? months[months.length-1] : null;
   const sel = $("#inputMonthSelect");
@@ -517,52 +524,56 @@ function renderInput(){
     return;
   }
   const d = ensureMonth(inputMonth);
-  const gridHead = `<tr><th></th>${S.products.map(p => `<th>${esc(p.name)}<br><span class="missing" style="font-weight:400">${esc(p.kind)}本数</span></th>`).join("")}</tr>`;
+  const head = `<thead><tr><th></th>${S.products.map(p => `<th>${esc(p.name)}<br><span style="font-weight:400;color:var(--sub)">${esc(p.kind)}本数</span></th>`).join("")}</tr></thead>`;
   const cell = (kind, ownerId, pid, val) =>
-    `<td><input type="number" min="0" step="any" class="grid-input" data-kind="${kind}" data-owner="${ownerId}" data-product="${pid}" value="${val == null ? "" : esc(val)}"></td>`;
+    `<td><input type="text" inputmode="decimal" class="grid-input" data-kind="${kind}" data-owner="${ownerId}" data-product="${pid}" value="${val == null ? "" : esc(val)}"></td>`;
   let html = "";
-  html += `<section class="panel"><h2>病棟 使用本数</h2><table class="grid">${gridHead}`;
+  html += `<h3>病棟 使用本数</h3><div class="sheet-wrap"><table class="sheet">${head}<tbody>`;
   for(const w of S.wards){
-    html += `<tr><td>${esc(w.name)}</td>${S.products.map(p => cell("wu", w.id, p.id, d.wu[w.id]?.[p.id])).join("")}</tr>`;
+    html += `<tr><th class="rowh">${esc(w.name)}</th>${S.products.map(p => cell("wu", w.id, p.id, d.wu[w.id]?.[p.id])).join("")}</tr>`;
   }
-  html += `</table></section>`;
-  html += `<section class="panel"><h2>病棟外 使用本数</h2><table class="grid">${gridHead}`;
+  html += `</tbody></table></div>`;
+  html += `<h3>病棟外 使用本数</h3><div class="sheet-wrap"><table class="sheet">${head}<tbody>`;
   for(const o of S.outs){
-    html += `<tr><td>${esc(o.name)}</td>${S.products.map(p => cell("ou", o.id, p.id, d.ou[o.id]?.[p.id])).join("")}</tr>`;
+    html += `<tr><th class="rowh">${esc(o.name)}</th>${S.products.map(p => cell("ou", o.id, p.id, d.ou[o.id]?.[p.id])).join("")}</tr>`;
   }
-  html += `</table></section>`;
-  html += `<section class="panel"><h2>延べ患者数</h2><table class="grid"><tr><th>病棟</th><th>延べ患者数（患者日）</th></tr>`;
+  html += `</tbody></table></div>`;
+  html += `<h3>延べ患者数</h3><div class="sheet-wrap"><table class="sheet"><thead><tr><th></th><th>延べ患者数（患者日）</th></tr></thead><tbody>`;
   for(const w of S.wards){
-    html += `<tr><td>${esc(w.name)}</td><td><input type="number" min="0" step="any" class="grid-input" data-kind="wp" data-owner="${w.id}" value="${d.wp[w.id] == null ? "" : esc(d.wp[w.id])}"></td></tr>`;
+    html += `<tr><th class="rowh">${esc(w.name)}</th><td><input type="text" inputmode="decimal" class="grid-input" data-kind="wp" data-owner="${w.id}" value="${d.wp[w.id] == null ? "" : esc(d.wp[w.id])}"></td></tr>`;
   }
-  html += `</table><table class="grid mt"><tr><th>病院全体</th><th>入院 延べ患者数</th><th>外来 延べ患者数</th></tr>
-    <tr><td></td>
-    <td><input type="number" min="0" step="any" class="grid-input" data-kind="hospIn" value="${d.hosp.in == null ? "" : esc(d.hosp.in)}"></td>
-    <td><input type="number" min="0" step="any" class="grid-input" data-kind="hospOut" value="${d.hosp.out == null ? "" : esc(d.hosp.out)}"></td></tr></table></section>`;
-  html += `<section class="panel"><h2>遵守率（実施 / 観察）</h2><table class="grid"><tr><th>病棟</th><th>入室時 実施</th><th>入室時 観察</th><th>退室時 実施</th><th>退室時 観察</th><th>入室時</th><th>退室時</th></tr>`;
+  html += `<tr><th class="rowh">病院全体・入院</th><td><input type="text" inputmode="decimal" class="grid-input" data-kind="hospIn" value="${d.hosp.in == null ? "" : esc(d.hosp.in)}"></td></tr>`;
+  html += `<tr><th class="rowh">病院全体・外来</th><td><input type="text" inputmode="decimal" class="grid-input" data-kind="hospOut" value="${d.hosp.out == null ? "" : esc(d.hosp.out)}"></td></tr>`;
+  html += `</tbody></table></div>`;
+  html += `<h3>遵守率（実施 / 観察）</h3><div class="sheet-wrap"><table class="sheet"><thead><tr><th></th><th>入室時 実施</th><th>入室時 観察</th><th>退室時 実施</th><th>退室時 観察</th><th>入室時</th><th>退室時</th></tr></thead><tbody>`;
   for(const w of S.wards){
     const c = d.comp[w.id] || {};
     const rate = pair => (pair && num(pair[1]) > 0) ? fmt(num(pair[0]) / num(pair[1]) * 100, 0) + "%" : "—";
-    html += `<tr><td>${esc(w.name)}</td>` +
-      `<td><input type="number" min="0" class="grid-input" data-kind="compEnD" data-owner="${w.id}" value="${c.en?.[0] ?? ""}"></td>` +
-      `<td><input type="number" min="0" class="grid-input" data-kind="compEnO" data-owner="${w.id}" value="${c.en?.[1] ?? ""}"></td>` +
-      `<td><input type="number" min="0" class="grid-input" data-kind="compExD" data-owner="${w.id}" value="${c.ex?.[0] ?? ""}"></td>` +
-      `<td><input type="number" min="0" class="grid-input" data-kind="compExO" data-owner="${w.id}" value="${c.ex?.[1] ?? ""}"></td>` +
-      `<td>${rate(c.en)}</td><td>${rate(c.ex)}</td></tr>`;
+    html += `<tr><th class="rowh">${esc(w.name)}</th>` +
+      `<td><input type="text" inputmode="numeric" class="grid-input" data-kind="compEnD" data-owner="${w.id}" value="${c.en?.[0] ?? ""}"></td>` +
+      `<td><input type="text" inputmode="numeric" class="grid-input" data-kind="compEnO" data-owner="${w.id}" value="${c.en?.[1] ?? ""}"></td>` +
+      `<td><input type="text" inputmode="numeric" class="grid-input" data-kind="compExD" data-owner="${w.id}" value="${c.ex?.[0] ?? ""}"></td>` +
+      `<td><input type="text" inputmode="numeric" class="grid-input" data-kind="compExO" data-owner="${w.id}" value="${c.ex?.[1] ?? ""}"></td>` +
+      `<td class="ro">${rate(c.en)}</td><td class="ro">${rate(c.ex)}</td></tr>`;
   }
-  html += `</table></section>`;
+  html += `</tbody></table></div>`;
   body.innerHTML = html;
-  $$(".grid-input", body).forEach(inp => {
-    inp.addEventListener("change", () => { applyInput(inp); });
-    inp.addEventListener("paste", ev => handlePaste(ev, inp));
-  });
+  $$("table.sheet", body).forEach(attachGrid);
+  if(focusPos){
+    const tables = $$("table.sheet", body);
+    const t = tables[focusPos.t];
+    if(t){
+      const inp = $$(".grid-input", t)[focusPos.i];
+      if(inp){ inp.focus(); inp.select(); }
+    }
+  }
 }
 function setComp(d, wid, key, idx, v){
   d.comp[wid] = d.comp[wid] || { en:[null,null], ex:[null,null] };
   d.comp[wid][key] = d.comp[wid][key] || [null,null];
   d.comp[wid][key][idx] = v;
 }
-function applyInput(inp){
+function applyInput(inp, skipRender){
   if(!inputMonth) return;
   const d = ensureMonth(inputMonth);
   const kind = inp.dataset.kind, owner = inp.dataset.owner, pid = inp.dataset.product;
@@ -579,28 +590,111 @@ function applyInput(inp){
   else if(kind === "compExD") setComp(d, owner, "ex", 0, v);
   else if(kind === "compExO") setComp(d, owner, "ex", 1, v);
   save();
-  if(kind.startsWith("comp")) renderInput(); // 遵守率%表示を更新
+  if(!skipRender && kind.startsWith("comp")){
+    const tables = $$("table.sheet", $("#inputBody"));
+    const ti = tables.indexOf(inp.closest("table"));
+    const ii = $$(".grid-input", inp.closest("table")).indexOf(inp);
+    renderInput({ t: ti, i: ii });
+  }
 }
-function handlePaste(ev, inp){
-  const text = (ev.clipboardData || window.clipboardData)?.getData("text");
-  if(!text || !/[\t\n]/.test(text)) return;
-  ev.preventDefault();
-  const table = inp.closest("table");
-  const inputs = $$(".grid-input", table);
-  const cols = $$("tr", table).length ? (inputs.length / Math.max(1, ($$("tr", table).length - 1))) : 0;
-  const startIdx = inputs.indexOf(inp);
-  if(startIdx < 0 || !cols) return;
-  const rows = text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map(r => r.split("\t"));
-  rows.forEach((row, ri) => {
-    row.forEach((val, ci) => {
-      const target = inputs[startIdx + ri * cols + ci];
-      if(!target) return;
-      target.value = val.trim() === "" ? "" : val.trim();
-      applyInput(target);
+/* グリッド操作: 矢印/Enter/Tab移動、ドラッグ・Shiftで範囲選択、Delete消去、TSVコピー＆貼り付け */
+function attachGrid(table){
+  const rows = $$("tbody tr", table).map(tr => $$(".grid-input", tr));
+  const state = { aR:0, aC:0, fR:0, fC:0, dragging:false };
+  const at = (r,c) => (rows[r] && rows[r][c]) || null;
+  const posOf = inp => { for(let r = 0; r < rows.length; r++){ const c = rows[r].indexOf(inp); if(c >= 0) return [r,c]; } return null; };
+  function paint(){
+    rows.forEach((row, r) => row.forEach((inp, c) => {
+      const inR = r >= Math.min(state.aR, state.fR) && r <= Math.max(state.aR, state.fR) &&
+                  c >= Math.min(state.aC, state.fC) && c <= Math.max(state.aC, state.fC);
+      inp.closest("td").classList.toggle("inrange", inR);
+    }));
+  }
+  function focusCell(r, c, extend){
+    const inp = at(r, c); if(!inp) return;
+    if(!extend){ state.aR = r; state.aC = c; }
+    state.fR = r; state.fC = c;
+    inp.focus(); inp.select();
+    paint();
+  }
+  rows.forEach((row, r) => row.forEach((inp, c) => {
+    inp.addEventListener("focus", () => {
+      if(!state.dragging){ state.aR = state.fR = r; state.aC = state.fC = c; paint(); }
+      inp.select();
     });
+    inp.addEventListener("change", () => applyInput(inp));
+    inp.addEventListener("mousedown", () => { state.dragging = true; state.aR = state.fR = r; state.aC = state.fC = c; paint(); });
+    inp.addEventListener("mouseenter", () => { if(state.dragging){ state.fR = r; state.fC = c; paint(); } });
+  }));
+  document.addEventListener("mouseup", () => { state.dragging = false; });
+  table.addEventListener("keydown", ev => {
+    const inp = ev.target; if(!inp.classList.contains("grid-input")) return;
+    const pos = posOf(inp); if(!pos) return;
+    const [r, c] = pos;
+    const maxR = rows.length - 1, maxC = rows[r].length - 1;
+    const move = (nr, nc, extend) => { ev.preventDefault(); focusCell(Math.max(0, Math.min(maxR, nr)), Math.max(0, Math.min(rows[Math.max(0, Math.min(maxR, nr))].length - 1, nc)), extend); };
+    switch(ev.key){
+      case "ArrowDown": move(r + 1, c, ev.shiftKey); break;
+      case "ArrowUp": move(r - 1, c, ev.shiftKey); break;
+      case "ArrowRight": if(inp.selectionStart === inp.value.length || ev.shiftKey) move(r, c + 1, ev.shiftKey); break;
+      case "ArrowLeft": if(inp.selectionStart === 0 || ev.shiftKey) move(r, c - 1, ev.shiftKey); break;
+      case "Enter": move(r + (ev.shiftKey ? -1 : 1), c, false); break;
+      case "Tab": {
+        ev.preventDefault();
+        let nr = r, nc = c + (ev.shiftKey ? -1 : 1);
+        if(nc > maxC){ nr = r + 1; nc = 0; } if(nc < 0){ nr = r - 1; nc = rows[Math.max(0, nr)] ? rows[Math.max(0, nr)].length - 1 : 0; }
+        if(nr < 0) nr = 0; if(nr > maxR){ nr = maxR; }
+        focusCell(nr, nc, false);
+        break;
+      }
+      case "Delete": case "Backspace": {
+        const fullySelected = inp.selectionStart === 0 && inp.selectionEnd === inp.value.length;
+        const area = (Math.abs(state.fR - state.aR) + 1) * (Math.abs(state.fC - state.aC) + 1);
+        if(fullySelected && area > 1){
+          ev.preventDefault();
+          for(let rr = Math.min(state.aR, state.fR); rr <= Math.max(state.aR, state.fR); rr++)
+            for(let cc = Math.min(state.aC, state.fC); cc <= Math.max(state.aC, state.fC); cc++){
+              const t = at(rr, cc); if(t){ t.value = ""; applyInput(t, true); }
+            }
+          save();
+          const tables = $$("table.sheet", $("#inputBody"));
+          renderInput({ t: tables.indexOf(table), i: state.aR * rows[0].length + state.aC });
+        } else if(fullySelected && inp.value !== "" && ev.key === "Delete"){
+          ev.preventDefault(); inp.value = ""; applyInput(inp);
+        }
+        break;
+      }
+    }
   });
-  renderInput();
-  save();
+  table.addEventListener("copy", ev => {
+    const area = (Math.abs(state.fR - state.aR) + 1) * (Math.abs(state.fC - state.aC) + 1);
+    if(area <= 1) return;
+    const lines = [];
+    for(let rr = Math.min(state.aR, state.fR); rr <= Math.max(state.aR, state.fR); rr++){
+      const vals = [];
+      for(let cc = Math.min(state.aC, state.fC); cc <= Math.max(state.aC, state.fC); cc++){ const t = at(rr, cc); vals.push(t ? t.value : ""); }
+      lines.push(vals.join("\t"));
+    }
+    ev.clipboardData.setData("text/plain", lines.join("\n"));
+    ev.preventDefault();
+  });
+  table.addEventListener("paste", ev => {
+    const text = (ev.clipboardData || window.clipboardData)?.getData("text");
+    if(!text || !/[\t\n]/.test(text)) return;
+    ev.preventDefault();
+    const startR = state.fR, startC = state.fC;
+    text.replace(/\r/g, "").replace(/\n$/, "").split("\n").forEach((line, ri) => {
+      line.split("\t").forEach((val, ci) => {
+        const t = at(startR + ri, startC + ci);
+        if(t){ t.value = val.trim(); applyInput(t, true); }
+      });
+    });
+    save();
+    const tables = $$("table.sheet", $("#inputBody"));
+    const tIdx = tables.indexOf(table);
+    const flat = startR * (rows[0] ? rows[0].length : 1) + startC;
+    renderInput({ t: tIdx, i: flat });
+  });
 }
 
 /* ================= 設定 ================= */
