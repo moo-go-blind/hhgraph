@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="ja" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>手指衛生ダッシュボード（汎用版）</title>
+<style>
+:root{
+  --bg:#f7f8f9; --panel:#ffffff; --ink:#1c2733; --sub:#5c6a76; --line:#dde3e8;
+  --accent:#1769aa; --accent2:#2e8b6e; --warn:#b3261e; --input-bg:#fffdf5;
+  --chip:#eef3f7; --th:#f0f3f5;
+}
+[data-theme="dark"]{
+  --bg:#14181c; --panel:#1d2329; --ink:#e8edf1; --sub:#9fb0bd; --line:#333d46;
+  --accent:#5aa2d6; --accent2:#4cc09a; --warn:#ff8a80; --input-bg:#262c22;
+  --chip:#26313a; --th:#242c33;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{display:flex;align-items:center;gap:16px;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header .title{font-size:15px;font-weight:700;white-space:nowrap}
+header .facility{color:var(--sub);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+nav.tabs{display:flex;gap:2px;margin-left:auto}
+nav.tabs button{border:0;background:none;color:var(--sub);font:inherit;font-weight:600;padding:7px 14px;cursor:pointer;border-bottom:2px solid transparent}
+nav.tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
+main{max-width:1180px;margin:0 auto;padding:14px 16px 40px}
+section.panel{background:var(--panel);border-top:1px solid var(--line);padding:14px 4px 18px;margin-bottom:6px}
+h2{font-size:14px;margin:2px 0 10px}
+h3{font-size:13px;margin:16px 0 8px;color:var(--sub)}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:8px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:11px;color:var(--sub)}
+select,input[type="text"],input[type="number"],input[type="month"]{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+input[type="number"]{text-align:right}
+button.btn{font:inherit;border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.btn.danger{color:var(--warn)}
+button.btn.small{padding:2px 8px;font-size:12px}
+.kpis{display:flex;flex-wrap:wrap;gap:22px;padding:6px 0 2px}
+.kpi .v{font-size:22px;font-weight:700}
+.kpi .v small{font-size:12px;font-weight:400;color:var(--sub)}
+.kpi .k{font-size:11px;color:var(--sub)}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:right;font-size:13px}
+th{background:var(--th);font-weight:600;text-align:right}
+th:first-child,td:first-child{text-align:left}
+table.grid td{padding:2px 4px}
+table.grid input{width:86px;border:1px solid transparent;background:var(--input-bg);border-radius:4px;padding:5px 6px}
+table.grid input:focus{border-color:var(--accent);outline:none}
+table.editor input[type="text"]{width:180px}
+table.editor input[type="number"]{width:90px}
+.missing{color:var(--sub)}
+svg.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--sub);margin-top:4px}
+.legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.note{font-size:12px;color:var(--sub);line-height:1.7}
+.settings-wrap{display:flex;gap:0;align-items:flex-start}
+.settings-nav{flex:0 0 150px;border-right:1px solid var(--line);padding-right:0}
+.settings-nav button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;color:var(--sub);padding:9px 12px;cursor:pointer;border-left:3px solid transparent}
+.settings-nav button.active{color:var(--accent);border-left-color:var(--accent);font-weight:700}
+.settings-body{flex:1;padding:2px 0 0 18px;min-width:0}
+.row-flex{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.mt{margin-top:12px}.mb{margin-bottom:12px}
+.empty{padding:26px 10px;text-align:center;color:var(--sub)}
+@media (max-width:720px){
+  header{flex-wrap:wrap;gap:6px}
+  .settings-wrap{flex-direction:column}
+  .settings-nav{flex:none;display:flex;border-right:0;border-bottom:1px solid var(--line);width:100%;overflow-x:auto}
+  .settings-nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}
+  .settings-nav button.active{border-bottom-color:var(--accent)}
+  .settings-body{padding:12px 0 0}
+  table.grid input{width:64px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="title">手指衛生ダッシュボード</div>
+  <div class="facility" id="facilityLabel"></div>
+  <nav class="tabs">
+    <button data-tab="view" class="active">ダッシュボード</button>
+    <button data-tab="input">入力</button>
+    <button data-tab="settings">設定</button>
+  </nav>
+</header>
+<main>
+  <!-- ===== ダッシュボード ===== -->
+  <div id="tab-view">
+    <div class="controls">
+      <div class="field"><label>期間</label><select id="presetSelect"></select></div>
+      <div class="field" id="customRange" hidden><label>開始</label><input type="month" id="customStart"></div>
+      <div class="field" id="customRange2" hidden><label>終了</label><input type="month" id="customEnd"></div>
+      <div class="field" id="savePresetBox" hidden><label>カスタム期間を保存</label><span><input type="text" id="presetName" placeholder="名前" style="width:110px"> <button class="btn small" id="savePresetBtn">保存</button></span></div>
+      <div class="field"><label>対象</label><select id="scopeSelect"></select></div>
+      <div class="field"><label>指標</label><select id="metricSelect"></select></div>
+    </div>
+    <div id="viewBody"></div>
+  </div>
+
+  <!-- ===== 入力 ===== -->
+  <div id="tab-input" hidden>
+    <div class="controls">
+      <div class="field"><label>入力する月</label><select id="inputMonthSelect"></select></div>
+      <div class="field"><label>月を追加</label><span><input type="month" id="newMonth"> <button class="btn small" id="addMonthBtn">追加</button></span></div>
+      <button class="btn small danger" id="deleteMonthBtn">この月を削除</button>
+    </div>
+    <div id="inputBody"></div>
+    <p class="note">空欄は未入力（0とは扱いません）。表のセルはExcelからコピーした値をそのまま貼り付けできます（貼り付け開始セルから右・下へ広がります）。入力すると自動で保存されます。</p>
+  </div>
+
+  <!-- ===== 設定 ===== -->
+  <div id="tab-settings" hidden>
+    <div class="settings-wrap">
+      <div class="settings-nav" id="settingsNav">
+        <button data-panel="general" class="active">全般</button>
+        <button data-panel="products">消毒薬マスタ</button>
+        <button data-panel="wards">病棟マスタ</button>
+        <button data-panel="outs">病棟外マスタ</button>
+        <button data-panel="data">データ</button>
+      </div>
+      <div class="settings-body" id="settingsBody"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ================= 状態 ================= */
+const LS_KEY = "hhGenericDashboard.v1";
+let uidSeq = 1;
+function uid(p){ return p + "_" + (uidSeq++) + "_" + Math.random().toString(36).slice(2,7); }
+
+function defaultState(){
+  uidSeq = 1;
+  const p1 = uid("p"), p2 = uid("p");
+  const w1 = uid("w"), w2 = uid("w"), w3 = uid("w");
+  const o1 = uid("o"), o2 = uid("o");
+  return {
+    settings: { facility:"", theme:"light", fiscalStart:4, defaultMetric:"perDenom", smoothing:0, showPoints:true },
+    products: [
+      { id:p1, name:"消毒剤A（例）", capacity:500, dose:3, kind:"請求" },
+      { id:p2, name:"消毒剤B（例）", capacity:250, dose:1.2, kind:"請求" }
+    ],
+    wards: [
+      { id:w1, name:"病棟A（例）", general:true },
+      { id:w2, name:"病棟B（例）", general:true },
+      { id:w3, name:"ICU（例）", general:false }
+    ],
+    outs: [
+      { id:o1, name:"外来（例）" },
+      { id:o2, name:"その他（例）" }
+    ],
+    presets: [],   // {name, start, end}
+    data: {}       // "YYYY-MM": {wu, ou, wp, hosp:{in,out}, comp}
+  };
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return defaultState();
+    const s = JSON.parse(raw);
+    if(!s || !s.settings || !Array.isArray(s.products) || !s.data) return defaultState();
+    return s;
+  }catch(e){ return defaultState(); }
+}
+let S = loadState();
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ================= ユーティリティ ================= */
+const $ = (q, r=document) => r.querySelector(q);
+const $$ = (q, r=document) => Array.from(r.querySelectorAll(q));
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function num(v){ if(v == null || v === "") return null; const n = Number(v); return Number.isFinite(n) ? n : null; }
+function fmt(n, d=0){ return n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("ja-JP",{maximumFractionDigits:d, minimumFractionDigits:d}); }
+function monthAdd(m, d){ const [y,mo] = m.split("-").map(Number); const t = y*12 + (mo-1) + d; return String(Math.floor(t/12)).padStart(4,"0") + "-" + String(t%12+1).padStart(2,"0"); }
+function monthRange(a, b){ const out=[]; if(!a || !b || a > b) return out; let cur = a; while(cur <= b){ out.push(cur); cur = monthAdd(cur, 1); } return out; }
+function fiscalYearOf(m){ const fs = S.settings.fiscalStart || 4; const [y,mo] = m.split("-").map(Number); return mo >= fs ? y : y - 1; }
+function fiscalRange(fy){ const fs = S.settings.fiscalStart || 4; const start = String(fy).padStart(4,"0") + "-" + String(fs).padStart(2,"0"); return [start, monthAdd(start, 11)]; }
+function monthData(m){ return S.data[m] || null; }
+function ensureMonth(m){
+  if(!S.data[m]) S.data[m] = { wu:{}, ou:{}, wp:{}, hosp:{ in:null, out:null }, comp:{} };
+  const d = S.data[m];
+  d.wu = d.wu || {}; d.ou = d.ou || {}; d.wp = d.wp || {}; d.comp = d.comp || {};
+  d.hosp = d.hosp || { in:null, out:null };
+  return d;
+}
+function dataMonths(){ return Object.keys(S.data).sort(); }
+function productById(id){ return S.products.find(p => p.id === id); }
+function wardById(id){ return S.wards.find(w => w.id === id); }
+
+/* ================= 集計（純粋計算） ================= */
+// scope: {type:'total'|'ward'|'general'|'out'|'series', id?}
+function scopeWards(scope){
+  if(scope.type === "ward" || scope.type === "total") return S.wards.map(w => w.id);
+  if(scope.type === "general") return S.wards.filter(w => w.general).map(w => w.id);
+  if(scope.type === "series") return [scope.id];
+  return [];
+}
+function scopeOuts(scope){
+  if(scope.type === "total" || scope.type === "out") return S.outs.map(o => o.id);
+  return [];
+}
+// 1か月の使用量。usage: Map風に {wardUsage, outUsage} から ml / 回数 / 本数
+function usageMonth(m, scope){
+  const d = monthData(m); if(!d) return null;
+  let ml = 0, count = 0, bottles = 0, any = false;
+  const add = (map, ownerId) => {
+    const per = map[ownerId]; if(!per) return;
+    for(const pid of Object.keys(per)){
+      const b = num(per[pid]); const p = productById(pid);
+      if(b == null || !p) continue;
+      any = true; bottles += b; ml += b * p.capacity; count += b * p.capacity / p.dose;
+    }
+  };
+  for(const wid of scopeWards(scope)) add(d.wu, wid);
+  for(const oid of scopeOuts(scope)) add(d.ou, oid);
+  return any ? { ml, count, bottles } : null;
+}
+// 1か月の分母（延べ患者）。total=入院+外来（入っている方だけでも可）, ward系=病棟患者日, out=外来
+function denomMonth(m, scope){
+  const d = monthData(m); if(!d) return null;
+  if(scope.type === "out"){
+    const v = num(d.hosp.out); return v == null ? null : { value:v, label:"外来延べ患者数" };
+  }
+  if(scope.type === "total"){
+    const i = num(d.hosp.in), o = num(d.hosp.out);
+    if(i == null && o == null) return null;
+    const label = (i != null && o != null) ? "延べ患者数（入院＋外来）" : (i != null ? "入院延べ患者数" : "外来延べ患者数");
+    return { value:(i||0) + (o||0), label };
+  }
+  let sum = 0, any = false;
+  for(const wid of scopeWards(scope)){ const v = num(d.wp[wid]); if(v != null){ sum += v; any = true; } }
+  return any ? { value:sum, label:"病棟延べ患者数" } : null;
+}
+// 期間の患者あたり: 使用量と分母が両方ある月だけを合計する
+function periodPerDenom(months, scope){
+  let ml = 0, count = 0, den = 0, used = 0;
+  for(const m of months){
+    const u = usageMonth(m, scope), dn = denomMonth(m, scope);
+    if(u && dn && dn.value > 0){ ml += u.ml; count += u.count; den += dn.value; used++; }
+  }
+  if(!used || den === 0) return null;
+  return { mlPer: ml / den, countPer: count / den, months: used, denLabel: denomMonth(months.find(m => denomMonth(m, scope)), scope)?.label || "" };
+}
+function periodUsage(months, scope){
+  let ml = 0, count = 0, bottles = 0, used = 0;
+  for(const m of months){ const u = usageMonth(m, scope); if(u){ ml += u.ml; count += u.count; bottles += u.bottles; used++; } }
+  return used ? { ml, count, bottles, months: used } : null;
+}
+// 遵守率: 入室時(en) / 退室時(ex)。実施・観察の生数で加重
+function complianceAgg(months, scope){
+  const wards = scope.type === "out" ? [] : scopeWards(scope);
+  let enD = 0, enO = 0, exD = 0, exO = 0, any = false;
+  for(const m of months){
+    const d = monthData(m); if(!d) continue;
+    for(const wid of wards){
+      const c = d.comp[wid]; if(!c) continue;
+      if(c.en){ const dd = num(c.en[0]), oo = num(c.en[1]); if(oo){ enD += dd||0; enO += oo; any = true; } }
+      if(c.ex){ const dd = num(c.ex[0]), oo = num(c.ex[1]); if(oo){ exD += dd||0; exO += oo; any = true; } }
+    }
+  }
+  if(!any) return null;
+  const rate = (dd, oo) => oo > 0 ? dd / oo : null;
+  return {
+    en: rate(enD, enO), ex: rate(exD, exO),
+    all: rate(enD + exD, enO + exO),
+    enObs: enO, exObs: exO
+  };
+}
+function complianceMonthSeries(months, scope){
+  return months.map(m => {
+    const c = complianceAgg([m], scope);
+    return { month:m, en: c ? c.en : null, ex: c ? c.ex : null, all: c ? c.all : null };
+  });
+}
+/* ================= ダッシュボード表示 ================= */
+const viewState = { preset:"latest-fiscal", customStart:"", customEnd:"", scope:"total", metric:null };
+
+function availablePresets(){
+  const months = dataMonths();
+  const list = [];
+  if(months.length){
+    const fyNow = fiscalYearOf(months[months.length-1]);
+    list.push({ id:"latest-fiscal", label: fyNow + "年度", start: fiscalRange(fyNow)[0], end: months[months.length-1] });
+    const fys = [...new Set(months.map(fiscalYearOf))].sort((a,b) => b-a);
+    for(const fy of fys){
+      const [s,e] = fiscalRange(fy);
+      list.push({ id:"fy"+fy, label: fy + "年度（全期間）", start:s, end: monthAdd(s,11) });
+    }
+    list.push({ id:"last12", label:"直近12か月", start: monthAdd(months[months.length-1], -11), end: months[months.length-1] });
+    list.push({ id:"all", label:"全期間", start: months[0], end: months[months.length-1] });
+  }
+  for(const p of S.presets) list.push({ id:"custom:"+p.name, label:"★ " + p.name, start:p.start, end:p.end });
+  list.push({ id:"custom", label:"カスタム…", start:"", end:"" });
+  return list;
+}
+function currentPeriod(){
+  const list = availablePresets();
+  const p = list.find(x => x.id === viewState.preset) || list[0];
+  if(!p) return null;
+  if(p.id === "custom") return { start: viewState.customStart, end: viewState.customEnd };
+  return { start: p.start, end: p.end };
+}
+function scopeOptions(){
+  const opts = [
+    { id:"total", label:"全体", scope:{type:"total"} },
+    { id:"ward", label:"病棟全体", scope:{type:"ward"} },
+    { id:"general", label:"一般病棟", scope:{type:"general"} },
+    { id:"out", label:"病棟外", scope:{type:"out"} },
+  ];
+  for(const w of S.wards) opts.push({ id:"series:"+w.id, label:w.name, scope:{type:"series", id:w.id} });
+  return opts;
+}
+function currentScope(){
+  const o = scopeOptions().find(x => x.id === viewState.scope) || scopeOptions()[0];
+  return o.scope;
+}
+const METRICS = [
+  { id:"perDenom", label:"mL / 延べ患者", needsDenom:true, get:(u,per) => per ? per.mlPer : null },
+  { id:"countPerDenom", label:"推定回数 / 延べ患者", needsDenom:true, get:(u,per) => per ? per.countPer : null },
+  { id:"ml", label:"使用量合計（L）", needsDenom:false, get:u => u ? u.ml/1000 : null },
+  { id:"count", label:"推定回数（合計）", needsDenom:false, get:u => u ? u.count : null },
+  { id:"bottles", label:"本数合計", needsDenom:false, get:u => u ? u.bottles : null },
+];
+function movingAvg(values, win){
+  if(!win || win < 2) return null;
+  return values.map((v,i) => {
+    let s = 0, n = 0;
+    for(let k = Math.max(0, i-win+1); k <= i; k++){ if(values[k] != null){ s += values[k]; n++; } }
+    return n ? s/n : null;
+  });
+}
+function drawLineChart(svg, months, series, opt){
+  // series: [{label,color,values:[number|null],dash?}]
+  const W = 960, H = 300, PL = 56, PR = 14, PT = 14, PB = 34;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  let max = opt.max != null ? opt.max : 0;
+  if(opt.max == null){ for(const s of series) for(const v of s.values) if(v != null && v > max) max = v; if(max <= 0) max = 1; max *= 1.15; }
+  const X = i => months.length <= 1 ? PL + iw/2 : PL + iw * i / (months.length - 1);
+  const Y = v => PT + ih - (v / max) * ih;
+  let out = "";
+  for(let g = 0; g <= 4; g++){
+    const v = max * g / 4, y = Y(v);
+    out += `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line)"/>`;
+    out += `<text x="${PL-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--sub)">${esc(opt.fmtAxis ? opt.fmtAxis(v) : fmt(v,1))}</text>`;
+  }
+  months.forEach((m,i) => {
+    if(months.length <= 14 || i % Math.ceil(months.length/14) === 0)
+      out += `<text x="${X(i)}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--sub)">${esc(m.slice(2))}</text>`;
+  });
+  for(const s of series){
+    // バー表示（最初の系列が ml 系のときだけ使う想定ではなく、線で統一し、点列を描く）
+    let path = "", started = false;
+    s.values.forEach((v,i) => {
+      if(v == null){ started = false; return; }
+      path += (started ? " L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1);
+      started = true;
+    });
+    if(path) out += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash ? 'stroke-dasharray="5 4"' : ""}/>`;
+    if(opt.points){
+      s.values.forEach((v,i) => { if(v != null) out += `<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${s.color}"><title>${esc(months[i])} ${esc(s.label)}: ${esc(opt.fmtVal ? opt.fmtVal(v) : fmt(v,1))}</title></circle>`; });
+    }
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+}
+function drawBarChart(svg, months, values, avgValues, opt){
+  const W = 960, H = 300, PL = 56, PR = 14, PT = 14, PB = 34;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  let max = 0; for(const v of values) if(v != null && v > max) max = v;
+  if(avgValues) for(const v of avgValues) if(v != null && v > max) max = v;
+  if(max <= 0) max = 1; max *= 1.15;
+  const Y = v => PT + ih - (v / max) * ih;
+  const bw = Math.max(4, iw / months.length * 0.62);
+  let out = "";
+  for(let g = 0; g <= 4; g++){
+    const v = max * g / 4, y = Y(v);
+    out += `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--line)"/>`;
+    out += `<text x="${PL-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--sub)">${esc(opt.fmtAxis ? opt.fmtAxis(v) : fmt(v,1))}</text>`;
+  }
+  months.forEach((m,i) => {
+    const cx = months.length <= 1 ? PL + iw/2 : PL + iw * (i + 0.5) / months.length;
+    if(values[i] != null)
+      out += `<rect x="${(cx-bw/2).toFixed(1)}" y="${Y(values[i])}" width="${bw}" height="${(PT+ih-Y(values[i])).toFixed(1)}" fill="var(--accent)" opacity="0.75"><title>${esc(m)}: ${esc(opt.fmtVal ? opt.fmtVal(values[i]) : fmt(values[i],1))}</title></rect>`;
+    if(months.length <= 14 || i % Math.ceil(months.length/14) === 0)
+      out += `<text x="${cx}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--sub)">${esc(m.slice(2))}</text>`;
+  });
+  if(avgValues){
+    let path = "", started = false;
+    months.forEach((m,i) => {
+      const v = avgValues[i]; if(v == null){ started = false; return; }
+      const cx = months.length <= 1 ? PL + iw/2 : PL + iw * (i + 0.5) / months.length;
+      path += (started ? " L" : "M") + cx.toFixed(1) + " " + Y(v).toFixed(1); started = true;
+    });
+    if(path) out += `<path d="${path}" fill="none" stroke="var(--accent2)" stroke-width="2"/>`;
+  }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+}
+
+function renderViewControls(){
+  const ps = $("#presetSelect");
+  const list = availablePresets();
+  if(!list.find(p => p.id === viewState.preset)) viewState.preset = list.length ? list[0].id : "custom";
+  // データが無い間は「カスタム」しか選べないため、データが入ったら年度プリセットを既定に戻す
+  if(viewState.preset === "custom" && !viewState._customChosen && list.find(p => p.id === "latest-fiscal")) viewState.preset = "latest-fiscal";
+  ps.innerHTML = list.map(p => `<option value="${esc(p.id)}" ${p.id === viewState.preset ? "selected" : ""}>${esc(p.label)}</option>`).join("");
+  const isCustom = viewState.preset === "custom";
+  $("#customRange").hidden = !isCustom; $("#customRange2").hidden = !isCustom; $("#savePresetBox").hidden = !isCustom;
+  if(isCustom && !viewState.customStart){ const ms = dataMonths(); if(ms.length){ viewState.customStart = ms[0]; viewState.customEnd = ms[ms.length-1]; } }
+  $("#customStart").value = viewState.customStart || "";
+  $("#customEnd").value = viewState.customEnd || "";
+  const so = $("#scopeSelect");
+  const opts = scopeOptions();
+  if(!opts.find(o => o.id === viewState.scope)) viewState.scope = "total";
+  so.innerHTML = opts.map(o => `<option value="${esc(o.id)}" ${o.id === viewState.scope ? "selected" : ""}>${esc(o.label)}</option>`).join("");
+}
+function renderView(){
+  renderViewControls();
+  const body = $("#viewBody");
+  const monthsAll = dataMonths();
+  if(!monthsAll.length){
+    body.innerHTML = `<div class="empty">まだデータがありません。「入力」タブで月を追加して入力するか、「設定 ＞ データ」からサンプルを読み込んでください。</div>`;
+    $("#metricSelect").innerHTML = "";
+    return;
+  }
+  const period = currentPeriod();
+  const months = monthRange(period.start, period.end);
+  const scope = currentScope();
+  const per = periodPerDenom(months, scope);
+  // 指標の選択肢は分母の有無で切り替える
+  const metricAvail = METRICS.filter(mt => !mt.needsDenom || per);
+  if(!viewState.metric || !metricAvail.find(mt => mt.id === viewState.metric)){
+    const def = S.settings.defaultMetric;
+    viewState.metric = (metricAvail.find(mt => mt.id === def) || metricAvail[0]).id;
+  }
+  $("#metricSelect").innerHTML = metricAvail.map(mt => `<option value="${mt.id}" ${mt.id === viewState.metric ? "selected" : ""}>${esc(mt.label)}</option>`).join("");
+  const metric = METRICS.find(mt => mt.id === viewState.metric);
+  const pu = periodUsage(months, scope);
+  const comp = complianceAgg(months, scope);
+
+  let kpi = "";
+  if(pu){
+    kpi += `<div class="kpi"><div class="v">${fmt(pu.ml/1000,1)}<small> L</small></div><div class="k">使用量合計（${pu.months}か月）</div></div>`;
+    kpi += `<div class="kpi"><div class="v">${fmt(pu.count,0)}<small> 回</small></div><div class="k">推定回数</div></div>`;
+    kpi += `<div class="kpi"><div class="v">${fmt(pu.bottles,0)}<small> 本</small></div><div class="k">本数合計</div></div>`;
+  }
+  if(per){
+    kpi += `<div class="kpi"><div class="v">${fmt(per.mlPer,1)}<small> mL</small></div><div class="k">${esc(per.denLabel)}あたり使用量</div></div>`;
+    kpi += `<div class="kpi"><div class="v">${fmt(per.countPer,2)}<small> 回</small></div><div class="k">${esc(per.denLabel)}あたり推定回数</div></div>`;
+  }
+  if(comp){
+    if(comp.en != null) kpi += `<div class="kpi"><div class="v">${fmt(comp.en*100,0)}<small> %</small></div><div class="k">遵守率 入室時（観察${fmt(comp.enObs,0)}）</div></div>`;
+    if(comp.ex != null) kpi += `<div class="kpi"><div class="v">${fmt(comp.ex*100,0)}<small> %</small></div><div class="k">遵守率 退室時（観察${fmt(comp.exObs,0)}）</div></div>`;
+  }
+
+  const seriesVals = months.map(m => {
+    const u = usageMonth(m, scope);
+    if(!u) return null;
+    if(metric.needsDenom){
+      const dn = denomMonth(m, scope);
+      if(!dn || dn.value <= 0) return null;
+      return metric.id === "perDenom" ? u.ml / dn.value : u.count / dn.value;
+    }
+    return metric.get(u, null);
+  });
+  const avg = movingAvg(seriesVals, S.settings.smoothing || 0);
+  const valFmt = v => metric.id === "ml" ? fmt(v,1) + " L" : fmt(v, metric.id === "countPerDenom" ? 2 : metric.id === "perDenom" ? 1 : 0);
+
+  let html = `<section class="panel"><div class="kpis">${kpi || '<span class="missing">対象期間にデータがありません</span>'}</div></section>`;
+  html += `<section class="panel"><h2>${esc(metric.label)}</h2><svg class="chart" id="usageChart"></svg>`;
+  if(avg) html += `<div class="legend"><span><span class="sw" style="background:var(--accent)"></span>月次</span><span><span class="sw" style="background:var(--accent2)"></span>${S.settings.smoothing}か月移動平均</span></div>`;
+  html += `</section>`;
+  if(comp){
+    html += `<section class="panel"><h2>遵守率</h2><svg class="chart" id="compChart"></svg>
+      <div class="legend"><span><span class="sw" style="background:var(--accent)"></span>入室時</span><span><span class="sw" style="background:var(--accent2)"></span>退室時</span><span><span class="sw" style="background:#c49000"></span>合算</span></div></section>`;
+  }
+  // 月次表
+  const showDenom = months.some(m => denomMonth(m, scope));
+  const showComp = !!comp;
+  html += `<section class="panel"><h2>月次データ</h2><table><thead><tr><th>月</th><th>使用量(L)</th><th>推定回数</th><th>本数</th>`;
+  if(showDenom) html += `<th>延べ患者</th><th>mL/延べ患者</th>`;
+  if(showComp) html += `<th>入室時</th><th>退室時</th>`;
+  html += `</tr></thead><tbody>`;
+  for(const m of months){
+    const u = usageMonth(m, scope), dn = denomMonth(m, scope), c = complianceAgg([m], scope);
+    html += `<tr><td>${esc(m)}</td>`;
+    html += u ? `<td>${fmt(u.ml/1000,1)}</td><td>${fmt(u.count,0)}</td><td>${fmt(u.bottles,0)}</td>` : `<td class="missing" colspan="3">未入力</td>`;
+    if(showDenom) html += dn ? `<td>${fmt(dn.value,0)}</td><td>${u ? fmt(u.ml/dn.value,1) : "—"}</td>` : `<td class="missing" colspan="2">—</td>`;
+    if(showComp) html += c ? `<td>${c.en != null ? fmt(c.en*100,0)+"%" : "—"}</td><td>${c.ex != null ? fmt(c.ex*100,0)+"%" : "—"}</td>` : `<td class="missing" colspan="2">—</td>`;
+    html += `</tr>`;
+  }
+  html += `</tbody></table></section>`;
+  body.innerHTML = html;
+  drawBarChart($("#usageChart"), months, seriesVals, avg, { fmtVal: valFmt, fmtAxis: v => valFmt(v) });
+  if(comp){
+    const cs = complianceMonthSeries(months, scope);
+    drawLineChart($("#compChart"), months, [
+      { label:"入室時", color:"var(--accent)", values: cs.map(x => x.en == null ? null : x.en*100) },
+      { label:"退室時", color:"var(--accent2)", values: cs.map(x => x.ex == null ? null : x.ex*100) },
+      { label:"合算", color:"#c49000", values: cs.map(x => x.all == null ? null : x.all*100), dash:true },
+    ], { max:100, points: S.settings.showPoints, fmtVal: v => fmt(v,0)+"%", fmtAxis: v => fmt(v,0)+"%" });
+  }
+}
+
+/* ================= 入力 ================= */
+let inputMonth = null;
+function renderInput(){
+  const months = dataMonths();
+  if(!inputMonth || !months.includes(inputMonth)) inputMonth = months.length ? months[months.length-1] : null;
+  const sel = $("#inputMonthSelect");
+  sel.innerHTML = months.map(m => `<option value="${m}" ${m === inputMonth ? "selected" : ""}>${m}</option>`).join("");
+  $("#deleteMonthBtn").disabled = !inputMonth;
+  const body = $("#inputBody");
+  if(!inputMonth){
+    body.innerHTML = `<div class="empty">月がありません。上の「月を追加」から始めてください。</div>`;
+    return;
+  }
+  const d = ensureMonth(inputMonth);
+  const gridHead = `<tr><th></th>${S.products.map(p => `<th>${esc(p.name)}<br><span class="missing" style="font-weight:400">${esc(p.kind)}本数</span></th>`).join("")}</tr>`;
+  const cell = (kind, ownerId, pid, val) =>
+    `<td><input type="number" min="0" step="any" class="grid-input" data-kind="${kind}" data-owner="${ownerId}" data-product="${pid}" value="${val == null ? "" : esc(val)}"></td>`;
+  let html = "";
+  html += `<section class="panel"><h2>病棟 使用本数</h2><table class="grid">${gridHead}`;
+  for(const w of S.wards){
+    html += `<tr><td>${esc(w.name)}</td>${S.products.map(p => cell("wu", w.id, p.id, d.wu[w.id]?.[p.id])).join("")}</tr>`;
+  }
+  html += `</table></section>`;
+  html += `<section class="panel"><h2>病棟外 使用本数</h2><table class="grid">${gridHead}`;
+  for(const o of S.outs){
+    html += `<tr><td>${esc(o.name)}</td>${S.products.map(p => cell("ou", o.id, p.id, d.ou[o.id]?.[p.id])).join("")}</tr>`;
+  }
+  html += `</table></section>`;
+  html += `<section class="panel"><h2>延べ患者数</h2><table class="grid"><tr><th>病棟</th><th>延べ患者数（患者日）</th></tr>`;
+  for(const w of S.wards){
+    html += `<tr><td>${esc(w.name)}</td><td><input type="number" min="0" step="any" class="grid-input" data-kind="wp" data-owner="${w.id}" value="${d.wp[w.id] == null ? "" : esc(d.wp[w.id])}"></td></tr>`;
+  }
+  html += `</table><table class="grid mt"><tr><th>病院全体</th><th>入院 延べ患者数</th><th>外来 延べ患者数</th></tr>
+    <tr><td></td>
+    <td><input type="number" min="0" step="any" class="grid-input" data-kind="hospIn" value="${d.hosp.in == null ? "" : esc(d.hosp.in)}"></td>
+    <td><input type="number" min="0" step="any" class="grid-input" data-kind="hospOut" value="${d.hosp.out == null ? "" : esc(d.hosp.out)}"></td></tr></table></section>`;
+  html += `<section class="panel"><h2>遵守率（実施 / 観察）</h2><table class="grid"><tr><th>病棟</th><th>入室時 実施</th><th>入室時 観察</th><th>退室時 実施</th><th>退室時 観察</th><th>入室時</th><th>退室時</th></tr>`;
+  for(const w of S.wards){
+    const c = d.comp[w.id] || {};
+    const rate = pair => (pair && num(pair[1]) > 0) ? fmt(num(pair[0]) / num(pair[1]) * 100, 0) + "%" : "—";
+    html += `<tr><td>${esc(w.name)}</td>` +
+      `<td><input type="number" min="0" class="grid-input" data-kind="compEnD" data-owner="${w.id}" value="${c.en?.[0] ?? ""}"></td>` +
+      `<td><input type="number" min="0" class="grid-input" data-kind="compEnO" data-owner="${w.id}" value="${c.en?.[1] ?? ""}"></td>` +
+      `<td><input type="number" min="0" class="grid-input" data-kind="compExD" data-owner="${w.id}" value="${c.ex?.[0] ?? ""}"></td>` +
+      `<td><input type="number" min="0" class="grid-input" data-kind="compExO" data-owner="${w.id}" value="${c.ex?.[1] ?? ""}"></td>` +
+      `<td>${rate(c.en)}</td><td>${rate(c.ex)}</td></tr>`;
+  }
+  html += `</table></section>`;
+  body.innerHTML = html;
+  $$(".grid-input", body).forEach(inp => {
+    inp.addEventListener("change", () => { applyInput(inp); });
+    inp.addEventListener("paste", ev => handlePaste(ev, inp));
+  });
+}
+function setComp(d, wid, key, idx, v){
+  d.comp[wid] = d.comp[wid] || { en:[null,null], ex:[null,null] };
+  d.comp[wid][key] = d.comp[wid][key] || [null,null];
+  d.comp[wid][key][idx] = v;
+}
+function applyInput(inp){
+  if(!inputMonth) return;
+  const d = ensureMonth(inputMonth);
+  const kind = inp.dataset.kind, owner = inp.dataset.owner, pid = inp.dataset.product;
+  const v = inp.value === "" ? null : num(inp.value);
+  if(kind === "wu" || kind === "ou"){
+    d[kind][owner] = d[kind][owner] || {};
+    if(v == null) delete d[kind][owner][pid]; else d[kind][owner][pid] = v;
+  } else if(kind === "wp"){
+    if(v == null) delete d.wp[owner]; else d.wp[owner] = v;
+  } else if(kind === "hospIn"){ d.hosp.in = v; }
+  else if(kind === "hospOut"){ d.hosp.out = v; }
+  else if(kind === "compEnD") setComp(d, owner, "en", 0, v);
+  else if(kind === "compEnO") setComp(d, owner, "en", 1, v);
+  else if(kind === "compExD") setComp(d, owner, "ex", 0, v);
+  else if(kind === "compExO") setComp(d, owner, "ex", 1, v);
+  save();
+  if(kind.startsWith("comp")) renderInput(); // 遵守率%表示を更新
+}
+function handlePaste(ev, inp){
+  const text = (ev.clipboardData || window.clipboardData)?.getData("text");
+  if(!text || !/[\t\n]/.test(text)) return;
+  ev.preventDefault();
+  const table = inp.closest("table");
+  const inputs = $$(".grid-input", table);
+  const cols = $$("tr", table).length ? (inputs.length / Math.max(1, ($$("tr", table).length - 1))) : 0;
+  const startIdx = inputs.indexOf(inp);
+  if(startIdx < 0 || !cols) return;
+  const rows = text.replace(/\r/g, "").replace(/\n$/, "").split("\n").map(r => r.split("\t"));
+  rows.forEach((row, ri) => {
+    row.forEach((val, ci) => {
+      const target = inputs[startIdx + ri * cols + ci];
+      if(!target) return;
+      target.value = val.trim() === "" ? "" : val.trim();
+      applyInput(target);
+    });
+  });
+  renderInput();
+  save();
+}
+
+/* ================= 設定 ================= */
+let settingsPanel = "general";
+function masterTable(kind){
+  const conf = {
+    products: { title:"消毒薬マスタ", cols:["名前","容量（mL/本）","1回量（mL）","本数の意味"], note:"容量と1回量から、使用量（mL）と推定回数を計算します。本数の意味は「請求」か「使用」を選べます（表示ラベルに使われます）。" },
+    wards: { title:"病棟マスタ", cols:["病棟名","一般病棟に含める"], note:"「一般病棟」は、チェックした病棟だけの合計です（ICU・NICUなどを外す用途）。" },
+    outs: { title:"病棟外マスタ", cols:["部署名"], note:"外来・手術室・透析室など、病棟以外の部署です。使用量は「病棟外」の対象になります。" },
+  }[kind];
+  let html = `<h2>${conf.title}</h2><p class="note">${conf.note}</p><table class="editor"><thead><tr>${conf.cols.map(c => `<th style="text-align:left">${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
+  S[kind].forEach((item, i) => {
+    html += `<tr data-id="${item.id}">`;
+    if(kind === "products"){
+      html += `<td><input type="text" data-f="name" value="${esc(item.name)}"></td>
+        <td><input type="number" min="0" step="any" data-f="capacity" value="${esc(item.capacity)}"></td>
+        <td><input type="number" min="0" step="any" data-f="dose" value="${esc(item.dose)}"></td>
+        <td><select data-f="kind"><option ${item.kind === "請求" ? "selected" : ""}>請求</option><option ${item.kind === "使用" ? "selected" : ""}>使用</option></select></td>`;
+    } else if(kind === "wards"){
+      html += `<td><input type="text" data-f="name" value="${esc(item.name)}"></td>
+        <td style="text-align:left"><input type="checkbox" data-f="general" ${item.general ? "checked" : ""}></td>`;
+    } else {
+      html += `<td><input type="text" data-f="name" value="${esc(item.name)}"></td>`;
+    }
+    html += `<td style="white-space:nowrap">
+      <button class="btn small" data-act="up" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button class="btn small" data-act="down" ${i === S[kind].length-1 ? "disabled" : ""}>↓</button>
+      <button class="btn small danger" data-act="del">削除</button></td></tr>`;
+  });
+  html += `</tbody></table><div class="mt"><button class="btn" data-act="add">＋ 追加</button></div>`;
+  return html;
+}
+function renderSettings(){
+  $$("#settingsNav button").forEach(b => b.classList.toggle("active", b.dataset.panel === settingsPanel));
+  const body = $("#settingsBody");
+  if(settingsPanel === "general"){
+    const st = S.settings;
+    body.innerHTML = `<h2>全般</h2>
+      <div class="row-flex">
+        <div class="field"><label>施設名（画面上に表示）</label><input type="text" id="stFacility" value="${esc(st.facility)}" style="width:220px"></div>
+        <div class="field"><label>テーマ</label><select id="stTheme"><option value="light" ${st.theme === "light" ? "selected" : ""}>ライト</option><option value="dark" ${st.theme === "dark" ? "selected" : ""}>ダーク</option></select></div>
+        <div class="field"><label>年度の開始月</label><select id="stFiscal">${[1,2,3,4,5,6,7,8,9,10,11,12].map(m => `<option value="${m}" ${st.fiscalStart === m ? "selected" : ""}>${m}月</option>`).join("")}</select></div>
+      </div>
+      <div class="row-flex mt">
+        <div class="field"><label>既定の指標</label><select id="stMetric">${METRICS.map(mt => `<option value="${mt.id}" ${st.defaultMetric === mt.id ? "selected" : ""}>${mt.label}</option>`).join("")}</select></div>
+        <div class="field"><label>移動平均</label><select id="stSmoothing">${[0,3,6,12].map(n => `<option value="${n}" ${st.smoothing === n ? "selected" : ""}>${n === 0 ? "なし" : n + "か月"}</option>`).join("")}</select></div>
+        <div class="field"><label>遵守率グラフの点</label><select id="stPoints"><option value="1" ${st.showPoints ? "selected" : ""}>表示</option><option value="0" ${!st.showPoints ? "selected" : ""}>非表示</option></select></div>
+      </div>
+      <h3>保存した期間プリセット</h3>
+      ${S.presets.length ? `<table><tbody>${S.presets.map((p,i) => `<tr><td>${esc(p.name)}</td><td>${esc(p.start)} 〜 ${esc(p.end)}</td><td><button class="btn small danger" data-preset-del="${i}">削除</button></td></tr>`).join("")}</tbody></table>` : '<p class="note">まだありません。ダッシュボードで期間を「カスタム」にして範囲を決めると保存できます。</p>'}
+    `;
+    $("#stFacility").addEventListener("change", e => { S.settings.facility = e.target.value; save(); applySettings(); });
+    $("#stTheme").addEventListener("change", e => { S.settings.theme = e.target.value; save(); applySettings(); });
+    $("#stFiscal").addEventListener("change", e => { S.settings.fiscalStart = Number(e.target.value); save(); });
+    $("#stMetric").addEventListener("change", e => { S.settings.defaultMetric = e.target.value; save(); });
+    $("#stSmoothing").addEventListener("change", e => { S.settings.smoothing = Number(e.target.value); save(); });
+    $("#stPoints").addEventListener("change", e => { S.settings.showPoints = e.target.value === "1"; save(); });
+    $$("[data-preset-del]", body).forEach(b => b.addEventListener("click", () => { S.presets.splice(Number(b.dataset.presetDel), 1); save(); renderSettings(); }));
+    return;
+  }
+  if(settingsPanel === "data"){
+    body.innerHTML = `<h2>データ</h2>
+      <p class="note">設定と入力データは、このブラウザの中に保存されています。別のPCへ移すときや、バックアップには書き出しを使ってください。</p>
+      <div class="row-flex">
+        <button class="btn primary" id="exportBtn">書き出し（JSON）</button>
+        <span class="field"><label>読み込み（JSON）</label><input type="file" id="importFile" accept=".json,application/json"></span>
+      </div>
+      <div class="row-flex mt">
+        <button class="btn" id="sampleBtn">サンプルデータを読み込む</button>
+        <button class="btn danger" id="clearBtn">すべてのデータを消す</button>
+      </div>`;
+    $("#exportBtn").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(S, null, 2)], { type:"application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "手指衛生ダッシュボード_データ.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    $("#importFile").addEventListener("change", e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try{
+          const s = JSON.parse(r.result);
+          if(!s.settings || !Array.isArray(s.products) || !s.data) throw new Error("形式が違います");
+          S = s; save(); applySettings(); renderAll();
+          alert("読み込みました。");
+        }catch(err){ alert("読み込めませんでした: " + err.message); }
+      };
+      r.readAsText(f);
+    });
+    $("#sampleBtn").addEventListener("click", () => { loadSample(); });
+    $("#clearBtn").addEventListener("click", () => {
+      if(confirm("設定と入力データをすべて消します。よろしいですか？")){ S = defaultState(); save(); applySettings(); renderAll(); }
+    });
+    return;
+  }
+  body.innerHTML = masterTable(settingsPanel);
+  const kind = settingsPanel;
+  $$("tr[data-id]", body).forEach(tr => {
+    const id = tr.dataset.id;
+    $$("[data-f]", tr).forEach(inp => inp.addEventListener("change", () => {
+      const item = S[kind].find(x => x.id === id); if(!item) return;
+      const f = inp.dataset.f;
+      if(f === "general") item.general = inp.checked;
+      else if(f === "capacity" || f === "dose") item[f] = num(inp.value) ?? 0;
+      else item[f] = inp.value;
+      save();
+    }));
+    $$("[data-act]", tr).forEach(btn => btn.addEventListener("click", () => {
+      const arr = S[kind], i = arr.findIndex(x => x.id === id);
+      if(btn.dataset.act === "del"){ if(confirm("削除しますか？（入力済みの値も表示されなくなります）")) arr.splice(i,1); }
+      if(btn.dataset.act === "up" && i > 0){ [arr[i-1], arr[i]] = [arr[i], arr[i-1]]; }
+      if(btn.dataset.act === "down" && i < arr.length-1){ [arr[i+1], arr[i]] = [arr[i], arr[i+1]]; }
+      save(); renderSettings();
+    }));
+  });
+  const addBtn = $('[data-act="add"]', body);
+  if(addBtn) addBtn.addEventListener("click", () => {
+    if(kind === "products") S.products.push({ id:uid("p"), name:"新しい消毒薬", capacity:500, dose:3, kind:"請求" });
+    if(kind === "wards") S.wards.push({ id:uid("w"), name:"新しい病棟", general:true });
+    if(kind === "outs") S.outs.push({ id:uid("o"), name:"新しい部署" });
+    save(); renderSettings();
+  });
+}
+function loadSample(){
+  if(Object.keys(S.data).length && !confirm("今の入力データをサンプルで置き換えます。よろしいですか？")) return;
+  const base = "2025-04";
+  let seed = 42; const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  S.data = {};
+  for(let i = 0; i < 14; i++){
+    const m = monthAdd(base, i);
+    const d = ensureMonth(m);
+    const factor = 0.9 + rnd() * 0.25;
+    for(const w of S.wards){
+      d.wu[w.id] = {}; d.wp[w.id] = Math.round((800 + rnd() * 500) * (w.general ? 1 : 0.3));
+      S.products.forEach((p, pi) => { d.wu[w.id][p.id] = Math.round((30 + rnd() * 60) * factor / (pi + 1)); });
+      const obsEn = Math.round(10 + rnd() * 25), obsEx = Math.round(10 + rnd() * 25);
+      d.comp[w.id] = { en:[Math.round(obsEn * (0.55 + rnd() * 0.4)), obsEn], ex:[Math.round(obsEx * (0.6 + rnd() * 0.38)), obsEx] };
+    }
+    for(const o of S.outs){
+      d.ou[o.id] = {};
+      S.products.forEach((p, pi) => { d.ou[o.id][p.id] = Math.round((20 + rnd() * 50) * factor / (pi + 1)); });
+    }
+    d.hosp.in = S.wards.reduce((s, w) => s + (d.wp[w.id] || 0), 0);
+    d.hosp.out = Math.round(15000 + rnd() * 3000);
+  }
+  save(); renderAll();
+  alert("サンプルを読み込みました。「ダッシュボード」タブで表示を確認できます。");
+}
+
+/* ================= 全体 ================= */
+function applySettings(){
+  document.documentElement.dataset.theme = S.settings.theme || "light";
+  $("#facilityLabel").textContent = S.settings.facility || "";
+  document.title = "手指衛生ダッシュボード" + (S.settings.facility ? "｜" + S.settings.facility : "");
+}
+function renderAll(){ renderView(); renderInput(); renderSettings(); }
+function switchTab(name){
+  $$("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  $("#tab-view").hidden = name !== "view";
+  $("#tab-input").hidden = name !== "input";
+  $("#tab-settings").hidden = name !== "settings";
+  if(name === "view") renderView();
+  if(name === "input") renderInput();
+  if(name === "settings") renderSettings();
+}
+$$("nav.tabs button").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+$$("#settingsNav button").forEach(b => b.addEventListener("click", () => { settingsPanel = b.dataset.panel; renderSettings(); }));
+$("#presetSelect").addEventListener("change", e => { viewState.preset = e.target.value; if(e.target.value === "custom") viewState._customChosen = true; renderView(); });
+$("#customStart").addEventListener("change", e => { viewState.customStart = e.target.value; viewState._customChosen = true; renderView(); });
+$("#customEnd").addEventListener("change", e => { viewState.customEnd = e.target.value; viewState._customChosen = true; renderView(); });
+$("#scopeSelect").addEventListener("change", e => { viewState.scope = e.target.value; renderView(); });
+$("#metricSelect").addEventListener("change", e => { viewState.metric = e.target.value; renderView(); });
+$("#savePresetBtn").addEventListener("click", () => {
+  const name = $("#presetName").value.trim();
+  if(!name || !viewState.customStart || !viewState.customEnd){ alert("名前と期間を入れてください。"); return; }
+  S.presets = S.presets.filter(p => p.name !== name);
+  S.presets.push({ name, start: viewState.customStart, end: viewState.customEnd });
+  save(); viewState.preset = "custom:" + name; renderView();
+});
+$("#inputMonthSelect").addEventListener("change", e => { inputMonth = e.target.value; renderInput(); });
+$("#addMonthBtn").addEventListener("click", () => {
+  const v = $("#newMonth").value;
+  if(!v){ alert("月を選んでください。"); return; }
+  ensureMonth(v); inputMonth = v; save(); renderInput();
+});
+$("#deleteMonthBtn").addEventListener("click", () => {
+  if(inputMonth && confirm(inputMonth + " の入力をすべて削除しますか？")){ delete S.data[inputMonth]; inputMonth = null; save(); renderInput(); }
+});
+applySettings();
+renderAll();
+</script>
+</body>
+</html>
