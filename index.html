@@ -705,7 +705,7 @@ let settingsPanel = "general";
 function masterTable(kind){
   const conf = {
     products: { title:"消毒薬マスタ", cols:["名前","容量（mL/本）","1回量（mL）","本数の意味"], note:"容量と1回量から、使用量（mL）と推定回数を計算します。本数の意味は「請求」か「使用」を選べます（表示ラベルに使われます）。" },
-    wards: { title:"病棟マスタ", cols:["病棟名","一般病棟に含める"], note:"「一般病棟」は、チェックした病棟だけの合計です（ICU・NICUなどを外す用途）。" },
+    wards: { title:"病棟マスタ", cols:["病棟名","一般病棟に含める"], note:"「一般病棟」はチェックした病棟だけの合計です（ICU・NICUなどを外す用途）。" },
     outs: { title:"病棟外マスタ", cols:["部署名"], note:"外来・手術室・透析室など、病棟以外の部署です。使用量は「病棟外」の対象になります。" },
   }[kind];
   let html = `<h2>${conf.title}</h2><p class="note">${conf.note}</p><table class="editor"><thead><tr>${conf.cols.map(c => `<th style="text-align:left">${c}</th>`).join("")}<th></th></tr></thead><tbody>`;
@@ -773,7 +773,7 @@ function renderSettings(){
         <button class="btn" id="exportXlsxBtn">書き出し（Excel）</button>
         <span class="field"><label>読み込み（Excel）</label><input type="file" id="importXlsxFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></span>
       </div>
-      <p class="note">CSVとExcelは入力データだけの形式です（月・区分・部署/病棟・製品・値の1シート）。Excelで開いて編集もできます（月は「2025-04」のような文字列のままにしてください）。読み込みでは今の入力データをCSVの内容で置き換えます。マスタに無い病棟・部署・製品名が出てきたら、マスタへ自動で追加します（製品の容量・1回量は仮の値になるので、消毒薬マスタで直してください）。設定やマスタも含めて移すときはJSONを使ってください。</p>
+      <p class="note">CSVとExcelは入力データだけの形式です（月・区分・部署/病棟・製品・値の1シート）。Excelで開いて編集もできます（月は「2025-04」のような文字列のままにしてください）。読み込みでは今の入力データをCSVの内容で置き換えます。マスタにない病棟・部署・製品名が出てきたら、マスタへ自動で追加します（製品の容量・1回量は仮の値になるので、消毒薬マスタで直してください）。設定やマスタも含めて移すときはJSONを使ってください。</p>
       <div class="row-flex mt">
         <button class="btn" id="sampleBtn">サンプルデータを読み込む</button>
         <button class="btn danger" id="clearBtn">すべてのデータを消す</button>
